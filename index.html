@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Count</title>
+    <meta charset="UTF-8" />
+    <meta name="color-scheme" content="light only" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="responsive.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css"
+      integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+  </head>
+  <body>
+    <!-- Set up -->
+    <div class="setup">
+      <i id="out" class="fa-solid fa-xmark"></i>
+      <div class="content">
+        <div class="logo">
+          <h1 class="row-5">Tính điểm</h1>
+          <p class="row-5">Đặt giá trị tiền thưởng cho từng thứ hạng</p>
+        </div>
+
+        <div class="rank">
+          <div class="r-item rank1">
+            <label for="rank1">1</label>
+            <input type="text" id="rank1" name="rank1" />
+          </div>
+          <div class="r-item rank2">
+            <label for="rank2">2</label>
+            <input type="text" id="rank2" name="rank2" />
+          </div>
+          <div class="r-item rank3">
+            <label for="rank3">3</label>
+            <input type="text" id="rank3" name="rank3" />
+          </div>
+          <div class="r-item rank4">
+            <label for="rank4">4</label>
+            <input type="text" id="rank4" name="rank4" />
+          </div>
+          <div class="r-item option">
+            <button class="save" style="font-weight: bold" id="save-rank">
+              Lưu
+            </button>
+            <button class="renew" style="font-weight: bold" id="reset-rank">
+              Mới
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main page -->
+    <div class="main">
+      <div class="menu">
+        <button id="settings">
+          <i class="fa-solid fa-wrench"></i>
+          Cài đặt
+        </button>
+
+        <!-- <h1 class="main-title row-5">Danh sách báo thủ</h1> -->
+        <button id="lock-screen">
+          <i class="fa-solid fa-lock lock-icon"></i> Khóa chạm
+        </button>
+      </div>
+
+      <div class="player-container" id="player-container">
+        <!-- Players will be rendered here dynamically -->
+      </div>
+
+      <div id="custom-note">Điểm tùy chỉnh</div>
+    </div>
+
+    <div class="screen-lock" id="screen-lock" style="display: none">
+      <h2>Đã khóa</h2>
+      <button id="unlock-btn">
+        <i id="lock-screen" class="fa-solid fa-unlock lock-icon"></i>
+        Mở
+      </button>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const playerContainer = document.getElementById('player-container');
+        const ranks = [0, 0, 0, 0];
+        const numPlayers = 4;
+        const numRanks = 4;
+
+        // Lock and Unlock Screen
+        const lockScreen = document.getElementById('screen-lock');
+        const lockIcon = document.getElementById('lock-screen');
+        const unlockBtn = document.getElementById('unlock-btn');
+
+        // Lock the screen
+        lockIcon.addEventListener('click', function () {
+          lockScreen.style.display = 'flex';
+        });
+
+        // Unlock the screen
+        unlockBtn.addEventListener('click', function () {
+          lockScreen.style.display = 'none';
+        });
+
+        // Template for rendering each player
+        function renderPlayer(i) {
+          return `
+            <div class="p-item player${i}" data-index="${i}">
+              <input type="text" class="name" placeholder="Tên...">
+              <div class="score">
+                <h2 id="p${i}-s" class="player-score">0</h2>
+              </div>
+              <div class="btn-section">
+                ${[...Array(numRanks)]
+                  .map(
+                    (_, j) => `
+                  <button class="p${i} btn-${j + 1}" onclick="count(${i}, ${
+                      j + 1
+                    })" disabled>0</button>
+                `
+                  )
+                  .join('')}
+              </div>
+              <div class="custom-section">
+                <div class="c-form">
+                  <button class="add" onclick="addCustom(${i})">
+                    <i class="fa-solid fa-circle-plus"></i>
+                  </button>
+                  <input id="custom${i}" class="custom-score" type="number">
+                  <button class="sub" onclick="subCustom(${i})">
+                    <i class="fa-solid fa-circle-minus"></i>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          `;
+        }
+
+        // Render all players
+        function renderPlayers() {
+          let playersHTML = '';
+          for (let i = 1; i <= numPlayers; i++) {
+            playersHTML += renderPlayer(i);
+          }
+          playerContainer.innerHTML += playersHTML;
+        }
+
+        // Save rank values
+        document.getElementById('save-rank').addEventListener('click', () => {
+          ranks[0] = document.getElementById('rank1').value || 0;
+          ranks[1] = document.getElementById('rank2').value || 0;
+          ranks[2] = document.getElementById('rank3').value || 0;
+          ranks[3] = document.getElementById('rank4').value || 0;
+          updateButtons();
+          document.querySelector('.setup').style.display = 'none';
+        });
+
+        // Reset ranks and scores
+        document.getElementById('reset-rank').addEventListener('click', () => {
+          // Reset all player scores to 0
+          document.querySelectorAll('.player-score').forEach((score) => {
+            score.innerText = 0;
+          });
+
+          // Clear the custom score inputs
+          document.querySelectorAll('.custom-score').forEach((input) => {
+            input.value = '';
+          });
+
+          document.querySelectorAll('.name').forEach((input) => {
+            input.value = '';
+          });
+
+          // Reset the ranks array
+          ranks.fill(0);
+
+          // Update the buttons with the new ranks
+          updateButtons();
+        });
+
+        // Update buttons with rank values
+        function updateButtons() {
+          document.querySelectorAll('.p-item').forEach((player) => {
+            const buttons = player.querySelectorAll('.btn-section button');
+            buttons.forEach((btn, idx) => {
+              const rank = ranks[idx];
+              btn.innerText = rank > 0 ? `+${rank}` : rank;
+              btn.disabled = rank == 0;
+            });
+          });
+        }
+
+        // Update the score based on rank button click
+        window.count = function (playerIndex, rankIndex) {
+          const scoreElement = document.getElementById(`p${playerIndex}-s`);
+          const oldScore = parseInt(scoreElement.innerText) || 0;
+          const newScore = oldScore + parseInt(ranks[rankIndex - 1] || 0);
+          scoreElement.innerText = newScore;
+        };
+
+        // Custom score addition
+        window.addCustom = function (playerIndex) {
+          const customInput = document.getElementById(`custom${playerIndex}`);
+          const customScore = parseInt(customInput.value) || 0;
+          updateCustomScore(playerIndex, customScore);
+        };
+
+        // Custom score subtraction
+        window.subCustom = function (playerIndex) {
+          const customInput = document.getElementById(`custom${playerIndex}`);
+          const customScore = parseInt(customInput.value) || 0;
+          updateCustomScore(playerIndex, -customScore);
+        };
+
+        // Update custom score
+        function updateCustomScore(playerIndex, customScore) {
+          const scoreElement = document.getElementById(`p${playerIndex}-s`);
+          const oldScore = parseInt(scoreElement.innerText) || 0;
+          scoreElement.innerText = oldScore + customScore;
+        }
+
+        // Initial setup
+        document.getElementById('settings').addEventListener('click', () => {
+          document.querySelector('.setup').style.display = 'block';
+        });
+
+        document.getElementById('out').addEventListener('click', () => {
+          document.querySelector('.setup').style.display = 'none';
+        });
+
+        // Render the players when the page loads
+        renderPlayers();
+      });
+    </script>
+  </body>
+</html>

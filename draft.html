@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Count</title>
+    <meta charset="UTF-8" />
+    <meta name="color-scheme" content="light only" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="responsive.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css"
+      integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <style>
+      .selected {
+        border: 2px solid white; /* Highlight selected rank */
+      }
+      .disabled-rank {
+        background-color: lightgray;
+        cursor: not-allowed;
+      }
+      .setup {
+        display: none; /* Hide setup initially */
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Set up -->
+    <div class="setup">
+      <i id="out" class="fa-solid fa-xmark"></i>
+      <div class="content">
+        <div class="logo">
+          <h1 class="row-5">Tính điểm</h1>
+          <p class="row-5">Đặt giá trị tiền thưởng cho từng thứ hạng</p>
+        </div>
+
+        <div class="rank">
+          <div class="r-item rank1">
+            <label for="rank1">1</label>
+            <input type="text" id="rank1" name="rank1" />
+          </div>
+          <div class="r-item rank2">
+            <label for="rank2">2</label>
+            <input type="text" id="rank2" name="rank2" />
+          </div>
+          <div class="r-item rank3">
+            <label for="rank3">3</label>
+            <input type="text" id="rank3" name="rank3" />
+          </div>
+          <div class="r-item rank4">
+            <label for="rank4">4</label>
+            <input type="text" id="rank4" name="rank4" />
+          </div>
+          <div class="r-item option">
+            <button class="save" style="font-weight: bold" id="save-rank">
+              Lưu
+            </button>
+            <button class="renew" style="font-weight: bold" id="reset-rank">
+              Mới
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main page -->
+    <div class="main">
+      <div class="menu">
+        <button id="settings">
+          <i class="fa-solid fa-wrench"></i>
+          Cài đặt
+        </button>
+
+        <button id="lock-screen">
+          <i class="fa-solid fa-lock lock-icon"></i> Khóa chạm
+        </button>
+      </div>
+
+      <div class="player-container" id="player-container">
+        <!-- Players will be rendered here dynamically -->
+      </div>
+
+      <div id="custom-note">Điểm tùy chỉnh</div>
+    </div>
+
+    <div class="screen-lock" id="screen-lock" style="display: none">
+      <h2>Đã khóa</h2>
+      <button id="unlock-btn">
+        <i id="lock-screen" class="fa-solid fa-unlock lock-icon"></i>
+        Mở
+      </button>
+    </div>
+
+    <div class="confirm-container">
+      <button id="cancel-selection">Hủy</button>
+      <button id="confirm-selection" disabled>Xác nhận</button>
+    </div>
+
+    <script>
+      console.log(document.getElementsByClassName('confirm-container'));
+
+      document.addEventListener('DOMContentLoaded', function () {
+        const playerContainer = document.getElementById('player-container');
+        const ranks = [0, 0, 0, 0];
+        const numPlayers = 4;
+        const numRanks = 4;
+        const selectedRanks = Array(numPlayers).fill(null); // Store selected ranks for each player
+
+        // Lock and Unlock Screen
+        const lockScreen = document.getElementById('screen-lock');
+        const lockIcon = document.getElementById('lock-screen');
+        const unlockBtn = document.getElementById('unlock-btn');
+
+        lockIcon.addEventListener('click', function () {
+          lockScreen.style.display = 'flex';
+        });
+
+        unlockBtn.addEventListener('click', function () {
+          lockScreen.style.display = 'none';
+        });
+
+        // Template for rendering each player
+        function renderPlayer(i) {
+          return `
+            <div class="p-item player${i}" data-index="${i}">
+              <input type="text" class="name" placeholder="Tên...">
+              <div class="score">
+                <h2 id="p${i}-s" class="player-score">0</h2>
+              </div>
+              <div class="btn-section">
+                ${[...Array(numRanks)]
+                  .map(
+                    (_, j) => `
+                  <button class="p${i} btn-${
+                      j + 1
+                    }" onclick="handleRankClick(${i}, ${j + 1})" disabled>+${
+                      ranks[j]
+                    }</button>
+                `
+                  )
+                  .join('')}
+              </div>
+              <div class="custom-section">
+                <div class="c-form">
+                  <button class="add" onclick="addCustom(${i})">
+                    <i class="fa-solid fa-circle-plus"></i>
+                  </button>
+                  <input id="custom${i}" class="custom-score" type="number">
+                  <button class="sub" onclick="subCustom(${i})">
+                    <i class="fa-solid fa-circle-minus"></i>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          `;
+        }
+
+        // Render all players
+        function renderPlayers() {
+          let playersHTML = '';
+          for (let i = 1; i <= numPlayers; i++) {
+            playersHTML += renderPlayer(i);
+          }
+          playerContainer.innerHTML = playersHTML;
+        }
+
+        // Handle rank selection
+        window.handleRankClick = function (playerIndex, rankIndex) {
+          const currentSelection = selectedRanks[playerIndex - 1];
+          const buttons = document.querySelectorAll(`.btn-${rankIndex}`);
+
+          // If the player is changing their selection
+          if (currentSelection !== null && currentSelection !== rankIndex) {
+            // Re-enable previous rank buttons for other players
+            document
+              .querySelectorAll(`.btn-${currentSelection}`)
+              .forEach((btn) => {
+                btn.classList.remove('disabled-rank');
+                btn.disabled = false;
+              });
+          }
+
+          // Highlight the selected button for the current player
+          document
+            .querySelector(`.player${playerIndex} .btn-${rankIndex}`)
+            .classList.add('selected');
+
+          // Remove highlight from the previously selected button
+          if (currentSelection !== null && currentSelection !== rankIndex) {
+            document
+              .querySelector(`.player${playerIndex} .btn-${currentSelection}`)
+              .classList.remove('selected');
+          }
+
+          // Disable the same rank buttons for other players without highlighting them
+          buttons.forEach((btn, idx) => {
+            if (idx !== playerIndex - 1) {
+              btn.classList.add('disabled-rank'); // Disable rank buttons for other players
+              btn.classList.remove('selected'); // Ensure no other players' buttons are highlighted
+              btn.disabled = true;
+            }
+          });
+
+          // Update the selection for the current player
+          selectedRanks[playerIndex - 1] = rankIndex;
+
+          // Enable Confirm button if all players have selected a rank
+          const allSelected = selectedRanks.every((rank) => rank !== null);
+          document.getElementById('confirm-selection').disabled = !allSelected;
+        };
+
+        // Handle Confirm button click
+        document
+          .getElementById('confirm-selection')
+          .addEventListener('click', function () {
+            // Update scores when confirmed
+            selectedRanks.forEach((rank, playerIndex) => {
+              const scoreElement = document.getElementById(
+                `p${playerIndex + 1}-s`
+              );
+              const currentScore = parseInt(scoreElement.innerText) || 0;
+              const rankValue = parseInt(ranks[rank - 1] || 0);
+              scoreElement.innerText = currentScore + rankValue;
+            });
+
+            // Reset selectedRanks after confirming
+            selectedRanks.fill(null);
+
+            // Re-enable all buttons for a new round
+            document.querySelectorAll('.btn-section button').forEach((btn) => {
+              btn.classList.remove('disabled-rank', 'selected');
+              btn.disabled = false;
+            });
+
+            // Disable the confirm button again
+            document.getElementById('confirm-selection').disabled = true;
+          });
+
+        // Custom score addition
+        window.addCustom = function (playerIndex) {
+          const customInput = document.getElementById(`custom${playerIndex}`);
+          const customScore = parseInt(customInput.value) || 0;
+          updateCustomScore(playerIndex, customScore);
+        };
+
+        // Custom score subtraction
+        window.subCustom = function (playerIndex) {
+          const customInput = document.getElementById(`custom${playerIndex}`);
+          const customScore = parseInt(customInput.value) || 0;
+          updateCustomScore(playerIndex, -customScore);
+        };
+
+        // Update custom score
+        function updateCustomScore(playerIndex, customScore) {
+          const scoreElement = document.getElementById(`p${playerIndex}-s`);
+          const oldScore = parseInt(scoreElement.innerText) || 0;
+          scoreElement.innerText = oldScore + customScore;
+        }
+
+        // Save rank values
+        document
+          .getElementById('save-rank')
+          .addEventListener('click', function () {
+            ranks[0] = document.getElementById('rank1').value || 0;
+            ranks[1] = document.getElementById('rank2').value || 0;
+            ranks[2] = document.getElementById('rank3').value || 0;
+            ranks[3] = document.getElementById('rank4').value || 0;
+
+            console.log('Rank values saved:', ranks); // Debugging
+
+            // Update buttons with the saved rank values
+            updateButtons(ranks);
+
+            // Hide the setup modal
+            document.querySelector('.setup').style.display = 'none';
+          });
+
+        // Update rank buttons with saved values
+        function updateButtons(ranks) {
+          document
+            .querySelectorAll('.p-item')
+            .forEach((player, playerIndex) => {
+              const buttons = player.querySelectorAll('.btn-section button');
+              buttons.forEach((btn, rankIndex) => {
+                btn.innerText = `+${ranks[rankIndex]}`;
+                btn.disabled = ranks[rankIndex] == 0;
+              });
+            });
+        }
+
+        // Handle settings button click
+        document.getElementById('settings').addEventListener('click', () => {
+          document.querySelector('.setup').style.display = 'block';
+        });
+
+        // Close the settings modal
+        document.getElementById('out').addEventListener('click', () => {
+          document.querySelector('.setup').style.display = 'none';
+        });
+
+        document.getElementById('reset-rank').addEventListener('click', () => {
+          // Reset the rank inputs to empty
+          document.getElementById('rank1').value = '';
+          document.getElementById('rank2').value = '';
+          document.getElementById('rank3').value = '';
+          document.getElementById('rank4').value = '';
+
+          // Reset all player scores to 0
+          document.querySelectorAll('.player-score').forEach((score) => {
+            score.innerText = '0';
+          });
+
+          document.querySelectorAll('.custom-score').forEach((input) => {
+            input.value = '';
+          });
+
+          document.querySelectorAll('.name').forEach((input) => {
+            input.value = '';
+          });
+
+          // Reset the numbers on all rank buttons to '0'
+          document.querySelectorAll('.btn-section button').forEach((btn) => {
+            btn.innerText = '+0'; // Reset the displayed number on the button to 0
+            btn.classList.remove('disabled-rank', 'selected'); // Remove any styling
+            btn.disabled = true; // Re-enable all buttons
+          });
+
+          // Clear the selectedRanks array
+          selectedRanks.fill(null);
+
+          // Disable the Confirm button
+          document.getElementById('confirm-selection').disabled = true;
+        });
+
+        // Render the players when the page loads
+        renderPlayers();
+      });
+    </script>
+  </body>
+</html>
